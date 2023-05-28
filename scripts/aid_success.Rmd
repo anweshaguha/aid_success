@@ -9,22 +9,119 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Setup & pull in data
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+library(pacman)
+p_load(tidyverse, rio, here, janitor, psych)
 ```
 
-## Including Plots
+Read in individual files.
+```{r}
+act_sat_conversion <- import(here("data", "ACT_SAT_concordance.csv")) %>% 
+  clean_names()
 
-You can also embed plots, for example:
+hs_gpa_test <- import(here("data", "clean_hs_gpa_different_test_score_4ag.csv")) %>% 
+  clean_names() #19964 NA values for converted
+first_enroll <- import(here("data", "first_term_enrolled_4ag.csv"))  %>% 
+  clean_names()#46496 NA values for ID, only ID & first term enrolled
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+gpa <- import(here("data", "gpa_4ag.csv")) %>% 
+  clean_names() #college gpa info
+
+hs <- import(here("data", "highschool_4ag.csv")) %>% 
+  clean_names()
+
+med_income <- import(here("data", "median_household_income_4ag.csv"))  %>% 
+  clean_names()#smallest N
+
+sat_old_new <- import(here("data", "SAT_old_new_concordance.csv")) %>% 
+  clean_names()
+
+sex_race_path <- import(here("data", "sex_racethn_pway_4ag.csv"))  %>% 
+  clean_names()#not as updated, so ignore
+
+sex_race_res_path <- import(here("data", "sex_racethn_rsdncy_pway_4ag.csv")) %>% 
+  clean_names()
+
+swasi_demo <- import(here("data", "swasi_bl_wb_and_demos_4ag.csv")) %>% 
+  clean_names()
+
+test <- import(here("data", "test_4ag.csv")) %>% 
+  clean_names()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Combine following data into one file.
+
+* sex_race_res_path (id, academic_period_admitted)
+* gpa (id, academic_period_admitted)
+* hs (id, academic_period_admitted)
+
+```{r}
+success1 <- left_join(gpa, sex_race_res_path)
+```
+
+Since we want to filter on first-time college entrants, we filter students who have legitimate HS information only. 
+```{r}
+hs_only <- hs %>% 
+  filter(institution_type == "H") %>% 
+  select(-c(institution_type, transfer_credits_attendance))
+
+hs_only$school_gpa <- str_replace_all(hs_only$school_gpa, ",", ".")
+hs_only$school_gpa <- as.numeric(hs_only$school_gpa)
+
+hs_only <- hs_only %>% 
+  filter(school_gpa >= 1 & school_gpa < 5) %>% 
+  mutate(id_period = paste0(id, academic_period_admitted)) 
+
+# keep highest GPA value when there are multiple HS reported 
+# this is to avoid a many-to-many join
+hs_only <- hs_only[order(hs_only$id_period, -hs_only$school_gpa), ]
+hs_only <- hs_only[ !duplicated(hs_only$id_period), ]
+```
+
+```{r}
+success <- left_join(hs_only, success1) %>% 
+  select(-id_period)
+
+# write_csv(success, "success.csv")
+```
+
+## Descriptives
+
+```{r}
+describe(success)
+```
+
+```{r}
+hist(success$school_gpa)
+```
+
+
+```{r}
+success <- success %>% 
+  filter(gpa>0)
+
+hist(success$gpa)
+```
+
+
+```{r}
+table(success$gender)
+```
+
+```{r}
+table(success$federal_ethnic_desc)
+```
+
+```{r}
+table(success$residency_desc)
+
+success_res <- success %>% 
+  filter(residency_desc == "Resident") %>% 
+  select(-residency_desc) 
+```
+
+This brings us down to `r length(unique(success_res$id))` unique IDs. 
+
+
