@@ -124,4 +124,48 @@ success_res <- success %>%
 
 This brings us down to `r length(unique(success_res$id))` unique IDs. 
 
+Let's look at descriptives of Pathway scholars.
+
+```{r}
+pathway_only <- success_res %>% 
+  filter(student_attribute == "PW")
+```
+
+```{r}
+hist(pathway_only$school_gpa)
+```
+
+```{r}
+hist(pathway_only$gpa)
+```
+
+
+```{r}
+table(pathway_only$gender)
+```
+
+```{r}
+table(pathway_only$federal_ethnic_desc)
+```
+
+Let's look at these side-by-side.
+
+```{r}
+success_pathway_viz <- success_res %>% 
+  mutate(pathway_status = case_when(student_attribute == "PW" ~ "Pathway",
+                                    TRUE ~ "No Pathway"))
+```
+
+
+```{r}
+boxplot(success_pathway_viz$school_gpa ~ success_pathway_viz$pathway_status,
+        horizontal = TRUE)
+```
+
+```{r}
+boxplot(success_pathway_viz$gpa ~ success_pathway_viz$pathway_status,
+        horizontal = TRUE)
+```
+
+I'd really like to look at family/household income descriptors also.
 
