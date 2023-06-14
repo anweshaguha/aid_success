@@ -168,7 +168,9 @@ Let's look at these side-by-side.
 ```{r}
 success_pathway_viz <- success_res %>% 
   mutate(pathway_status = case_when(student_attribute == "PW" ~ "Pathway",
-                                    TRUE ~ "No Pathway"))
+                                    TRUE ~ "No Pathway")) %>% 
+  separate_wider_position(academic_period_admitted, c(start_year = 4, start_term = 2)) %>% 
+  mutate(start_year = as.numeric(start_year))
 ```
 
 
@@ -182,5 +184,31 @@ boxplot(success_pathway_viz$gpa ~ success_pathway_viz$pathway_status,
         horizontal = TRUE)
 ```
 
-I'd really like to look at family/household income descriptors also.
+Moving on to family/household income descriptors:
+
+```{r}
+hist(med_income$med_hh_inc_2019)
+```
+
+Questions: 
+
+* Do we have med_income file with start date extending to 2022?
+
+Pathway & income viz
+
+```{r}
+income_pathway_viz_data <- left_join(med_income, success_pathway_viz)
+```
+
+```{r}
+income_pathway_viz <- income_pathway_viz_data %>% 
+  select(school_gpa, id, med_hh_inc_2019, pathway_status) %>% 
+  na.omit() %>% 
+  ggplot(aes(school_gpa, med_hh_inc_2019)) +
+  geom_point(alpha = .3, color = "gray") +
+  facet_wrap(~pathway_status) +
+  theme_bw()
+
+income_pathway_viz
+```
 
