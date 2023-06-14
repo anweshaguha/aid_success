@@ -2,7 +2,15 @@
 title: "Aid Success"
 author: "Anwesha Guha"
 date: "5/27/2023"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: flatly
+    highlight: tango
+    code_folding: show
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -38,10 +46,15 @@ med_income <- import(here("data", "median_household_income_4ag.csv"))  %>%
 sat_old_new <- import(here("data", "SAT_old_new_concordance.csv")) %>% 
   clean_names()
 
-sex_race_path <- import(here("data", "sex_racethn_pway_4ag.csv"))  %>% 
-  clean_names()#not as updated, so ignore
+# sex_race_path <- import(here("data", "sex_racethn_pway_4ag.csv"))  %>% 
+#  clean_names()
+# not most updated file, so ignored
 
-sex_race_res_path <- import(here("data", "sex_racethn_rsdncy_pway_4ag.csv")) %>% 
+# sex_race_res_path <- import(here("data", "sex_racethn_rsdncy_pway_4ag.csv")) %>% 
+#  clean_names()
+# not most updated file, so ignored
+
+path_dem <- import(here("data", "sex_racethn_stype_rsdncy_pway_4ag.csv")) %>% 
   clean_names()
 
 swasi_demo <- import(here("data", "swasi_bl_wb_and_demos_4ag.csv")) %>% 
@@ -53,15 +66,16 @@ test <- import(here("data", "test_4ag.csv")) %>%
 
 Combine following data into one file.
 
-* sex_race_res_path (id, academic_period_admitted)
+* path_dem (id, academic_period_admitted)
 * gpa (id, academic_period_admitted)
 * hs (id, academic_period_admitted)
 
 ```{r}
-success1 <- left_join(gpa, sex_race_res_path)
+success1 <- left_join(gpa, path_dem)
 ```
 
-Since we want to filter on first-time college entrants, we filter students who have legitimate HS information only. 
+We filter students who have legitimate HS information only. 
+
 ```{r}
 hs_only <- hs %>% 
   filter(institution_type == "H") %>% 
@@ -82,7 +96,8 @@ hs_only <- hs_only[ !duplicated(hs_only$id_period), ]
 
 ```{r}
 success <- left_join(hs_only, success1) %>% 
-  select(-id_period)
+  select(-id_period) %>% 
+  filter(!(student_type_desc %in% c("Post-Baccalaureate", "Intl Student Exchange")))
 
 # write_csv(success, "success.csv")
 ```
